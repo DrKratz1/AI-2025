@@ -10,20 +10,20 @@ metadata = {
     # - Allowed characters: A-Z, a-z, 0-9, -, _ (no spaces allowed)
     # - Minimum length: 3 characters
     # - Maximum length: 20 characters
-    "team_name": f"", 
+    "team_name": f"AI_Tacticians", 
 
     # Fill in the student IDs and emails of both team members here. There must
     # be exactly two members in the list. 
     "team_members": [
         {
-            "name": "",
-            "student_id": "",
-            "email": "" # Must be @student.unimelb.edu.au address
+            "name": "Jason Jiang",
+            "student_id": "1460397",
+            "email": "jasjiang@student.unimelb.edu.au" # Must be @student.unimelb.edu.au address
         },
         {
-            "name": "",
-            "student_id": "",
-            "email": "" # Must be @student.unimelb.edu.au address
+            "name": "Winston Zhang",
+            "student_id": "1344479",
+            "email": "chenhzhang2@student.unimelb.edu.au" # Must be @student.unimelb.edu.au address
         }
     ],
 }
