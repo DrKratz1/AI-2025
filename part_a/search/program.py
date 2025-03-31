@@ -33,6 +33,33 @@ def search(
     # ...
     # ... (your solution goes here!)
     # ...
+    visited = []
+    queue = []
+    goalStates = []
+    finalRow = 7
+
+    #Going through the initialisation of the board and identifying start and goal states.
+    for x, y in board:
+        state = board[Coord(r = x, c = y)]
+        if str(state) == 'R':
+            queue.append([x,y])
+            visited.append([x,y])
+        if x == finalRow:
+            goalStates.append([x,y])
+
+    #Instead of using pop function, instead just iterate through the queue.
+    queuePosition = 0
+    while queuePosition < len(queue):
+        currentCoord = queue[queuePosition]
+        visited.append(currentCoord)
+        queuePosition += 1
+        
+        #...
+        #Probably check all adjacent positions, it's a valid move if it is in the board dict
+        #Add the valid move to the queue
+
+
+
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
