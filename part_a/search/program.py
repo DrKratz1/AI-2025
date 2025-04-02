@@ -3,7 +3,9 @@
 
 from .core import CellState, Coord, Direction, MoveAction
 from .utils import render_board
+from collections import deque
 
+BOARD_N = 8
 
 def search(
     board: dict[Coord, CellState]
@@ -33,33 +35,43 @@ def search(
     # ...
     # ... (your solution goes here!)
     # ...
+
+    #python -m search < test-vis1.csv
     visited = []
-    queue = []
-    goalStates = []
-    finalRow = 7
+    queue = deque()
+    FINALROW = 7
+    directions = [(0,-1), (1,-1), (1,0), (1,1), (0,1)]
 
-    #Going through the initialisation of the board and identifying start and goal states.
+    #Going through the initialisation of the board and identifying the starting state.
     for x, y in board:
-        state = board[Coord(r = x, c = y)]
-        if str(state) == 'R':
-            queue.append([x,y])
-            visited.append([x,y])
-        if x == finalRow:
-            goalStates.append([x,y])
-
-    #Instead of using pop function, instead just iterate through the queue.
-    queuePosition = 0
-    while queuePosition < len(queue):
-        currentCoord = queue[queuePosition]
-        visited.append(currentCoord)
-        queuePosition += 1
-        
-        #...
-        #Probably check all adjacent positions, it's a valid move if it is in the board dict
-        #Add the valid move to the queue
+        state = board.get(Coord(r = x, c = y))
+        if state == CellState.RED:
+            queue.append((x,y))
+            visited.append((x,y))
+            break
 
 
+    while queue:
+        print(visited)
+        r, c = queue.popleft()
 
+        #Check all neighbouring positions, it's a valid move if it is in the board dict and == 'Lilypad'
+        for dx, dy in directions:
+            newR, newC = r + dx, c + dy
+
+            if (newR < BOARD_N) & (newC < BOARD_N) & (newC >= 0) & ((newR, newC) not in visited):
+                newState = board.get(Coord(newR, newC))
+                if (newState == CellState.LILY_PAD):
+                    queue.append((newR, newC))
+                    visited.append((newR, newC))
+
+                #check if we can jump over the frog
+                elif (newState == CellState.BLUE):
+                    print("jumping over frog not implemented")
+                    #The way we implement job is looking at the current Direction, move one more in that direction and check if that state is a lilypad
+                    #Combo jumps would probably involve DFS or repeatedly checking feasibility of jumps
+                    
+    #python -m search < test-vis1.csv
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
