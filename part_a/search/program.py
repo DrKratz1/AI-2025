@@ -7,6 +7,11 @@ from collections import deque
 
 BOARD_N = 8
 directions = [(0,-1), (1,-1), (1,0), (1,1), (0,1)]
+directionDict = {(0,-1): Direction.Left, 
+                 (1,-1): Direction.DownLeft, 
+                 (1,0): Direction.Down, 
+                 (1,1): Direction.DownRight, 
+                 (0,1): Direction.Right}
 
 def search(
     board: dict[Coord, CellState]
@@ -38,46 +43,72 @@ def search(
     # ...
 
     #python -m search < test-vis1.csv
-    visited = []
-    queue = deque()
 
-    #Going through the initialisation of the board and identifying the starting state.
-    for x, y in board:
-        state = board.get(Coord(r = x, c = y))
-        if state == CellState.RED:
-            queue.append((x,y))
-            visited.append((x,y))
-            break  
+    def findStart(board):
+        #Going through the initialisation of the board and identifying the starting state.
+        for x, y in board:
+            state = board.get(Coord(r = x, c = y))
+            if state == CellState.RED:
+                return (x, y)
     
-    while queue:
-        print(queue)
-        r, c = queue.popleft()
+    
+    def backtrace(parent, start, end):
+        # backtrace the path from the end to the start using the parent dictionary
+        path = [end]
+        while path[-1] != start:
+            path.append(parent[path[-1]])
+        path.reverse()
+        return path
 
-        #Check all neighbouring positions, it's a valid move if it is in the board dict and == 'Lilypad'
-        for dx, dy in directions:
-            newR, newC = r + dx, c + dy
-
-            if ((withinBounds(newR, newC)) and ((newR, newC) not in visited)):
-                newState = board.get(Coord(newR, newC))
-                if (newState == CellState.LILY_PAD):
-                    queue.append((newR, newC))
-                    visited.append((newR, newC))
-
-                #Check if we can jump over the frog
-                elif (newState == CellState.BLUE):
-                    if ((withinBounds(newR + dx, newC + dy)) and (board.get(Coord(newR + dx, newC + dy)) == CellState.LILY_PAD) and ((newR + dx, newC + dy) not in visited)):
-                        queue.append((newR + dx, newC + dy))
-                        visited.append((newR + dx, newC + dy))
-
-                        #Call findJumpChain to queue the possible squares we could've jumped to from here
-                        for coord in findJumpChain(newR + dx, newC + dy, board, visited, result = []):
-                            queue.append(coord)
-                            visited.append(coord)
+    def bfs(board, start):
+        parent = {}
+        visited = []
+        queue = deque()
+        queue.append(start)
+        visited.append(start)
+        
+        while queue:
+            r, c = queue.popleft()
+            
+            # check if we have reached the end state
+            if r == 7:
+                return backtrace(parent, start, (r, c))
+            
+            # check neighbouring positions
+            for dx, dy in directions:
+                newR, newC = r + dx, c + dy
                 
-                #Still need to make the frog stop moving once it reaches the end state
+                # check validity of new position
+                if withinBounds(newR, newC) and ((newR, newC) not in visited):
+                    newState = board.get(Coord(newR, newC))
+                    if newState == CellState.LILY_PAD:
+                        parent[newR, newC] = (r, c)
+                        queue.append((newR, newC))
+                        visited.append((newR, newC))
+            
+                    elif newState == CellState.BLUE:
+                        # check if we can jump over the frog
+                        if ((withinBounds(newR + dx, newC + dy)) and (board.get(Coord(newR + dx, newC + dy)) == CellState.LILY_PAD) and ((newR + dx, newC + dy) not in visited)):
+                            parent[newR + dx, newC + dy] = (r, c)
+                            queue.append((newR + dx, newC + dy))
+                            visited.append((newR + dx, newC + dy))
+
+                            # call findJumpChain to queue the possible squares we could've jumped to from here
+                            for coord in findJumpChain(newR + dx, newC + dy, board, visited, result = []):
+                                parent[coord] = (r, c)
+                                queue.append(coord)
+                                visited.append(coord)
+        
+        return None
     
-                    
-    #python -m search < test-vis1.csv
+    start = findStart(board)
+    moveList = bfs(board, start)
+    
+    if moveList == None:
+        # if no path was found, return None
+        return None
+    
+    # python -m search < test-vis1.csv
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
