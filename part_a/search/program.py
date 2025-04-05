@@ -97,12 +97,6 @@ def backtrace(parent, direction, start, end):
     path.pop(-1)  # remove the last node
     return path
 
-    # path = [end]
-    # while path[-1] != start:
-    #     path.append(parent[path[-1]])
-    # path.reverse()
-    # return path
-
 
 def bfs(board, start):
     parent = {}
@@ -155,28 +149,6 @@ def bfs(board, start):
                                 direction[coord] = jumpChain[coord]
                                 queue.append(coord)
                                 visited.append(coord)
-
-                # elif newState == CellState.BLUE:
-                #     # check if we can jump over the frog
-                #     if (
-                #         withinBounds(newR + dx, newC + dy)
-                #         and board.get(Coord(newR + dx, newC + dy)) == CellState.LILY_PAD
-                #         and (newR + dx, newC + dy) not in visited
-                #     ):
-                #         parent[newR + dx, newC + dy] = (r, c)
-                #         direction[newR + dx, newC + dy] = directionDict[(dx, dy)]
-                #         queue.append((newR + dx, newC + dy))
-                #         visited.append((newR + dx, newC + dy))
-
-                #         # call findJumpChain to queue the possible squares we could've jumped to from here
-
-                #         for coord in findJumpChain(
-                #             newR + dx, newC + dy, board, visited, result=[]
-                #         ):
-                #             parent[coord] = (r, c)
-                #             direction[coord] = (dx, dy)
-                #             queue.append(coord)
-                #             visited.append(coord)
 
     return None
 
