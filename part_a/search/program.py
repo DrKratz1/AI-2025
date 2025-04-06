@@ -45,12 +45,15 @@ def search(board: dict[Coord, CellState]) -> list[MoveAction] | None:
 
     start = findStart(board)
 
-    # print(findJumpChain(1, 5, board, visited=[], result={(1, 5): []}))
+    # print(findJumpChain(0, 6, board, visited=[], result={(0, 6): []}))
+    # print(board.get(Coord(0, 6)) == CellState.LILY_PAD)
+
     moveList = bfs(board, start)
 
+    result = None
     if moveList == None:
         # if no path was found, return None
-        return None
+        return result
     else:
         result = []
         for i in range(len(moveList)):
@@ -107,7 +110,6 @@ def bfs(board, start):
     visited.append(start)
 
     while queue:
-        # print(queue)
         r, c = queue.popleft()
 
         # check if we have reached the end state
@@ -122,7 +124,7 @@ def bfs(board, start):
             # check validity of new position
             if withinBounds(newR, newC) and ((newR, newC) not in visited):
                 newState = board.get(Coord(newR, newC))
-                if newState == CellState.LILY_PAD:
+                if newState == CellState.LILY_PAD and (newR, newC) not in visited:
                     parent[newR, newC] = (r, c)
                     direction[newR, newC] = directionDict[(dx, dy)]
                     queue.append((newR, newC))
@@ -140,7 +142,7 @@ def bfs(board, start):
                             newR - dx,
                             newC - dy,
                             board,
-                            visited.copy(),
+                            [],
                             result={(newR - dx, newC - dy): []},
                         )
                         for coord in list(jumpChain.keys()):
