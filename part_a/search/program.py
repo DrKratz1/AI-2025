@@ -6,6 +6,7 @@ from .utils import render_board
 from collections import deque
 
 BOARD_N = 8
+END_ROW = 7
 directions = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1)]
 directionDict = {
     (0, -1): Direction.Left,
@@ -44,13 +45,12 @@ def search(board: dict[Coord, CellState]) -> list[MoveAction] | None:
     # ...
 
     start = findStart(board)
-
-    # print(findJumpChain(1, 5, board, visited=[], result={(1, 5): []}))
     moveList = bfs(board, start)
 
     if moveList == None:
         # if no path was found, return None
         return None
+
     else:
         result = []
         for i in range(len(moveList)):
@@ -58,26 +58,19 @@ def search(board: dict[Coord, CellState]) -> list[MoveAction] | None:
             direction = moveList[i][1]
             coord = Coord(r=coord[0], c=coord[1])
 
-            if any(isinstance(i, list) for i in direction):
+            if any(isinstance(j, list) for j in direction):
                 direction = flattenList(direction)
 
             result.append(MoveAction(coord, direction))
-
-    # python -m search < test-vis1.csv
+    
+    # python -m search < test-vis3.csv
 
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
     # search algorithm. Remember: if no solution is possible for a given input,
     # return `None` instead of a list.
     return result
-    """
-        MoveAction(Coord(0, 5), [Direction.Down]),
-        MoveAction(Coord(1, 5), [Direction.DownLeft]),
-        MoveAction(Coord(3, 3), [Direction.Left]),
-        MoveAction(Coord(3, 2), [Direction.Down, Direction.Right]),
-        MoveAction(Coord(5, 4), [Direction.Down]),
-        MoveAction(Coord(6, 4), [Direction.Down]),
-       """
+
 
 
 def findStart(board):
@@ -97,7 +90,6 @@ def backtrace(parent, direction, start, end):
     path.pop(-1)  # remove the last node
     return path
 
-
 def bfs(board, start):
     parent = {}
     direction = {}
@@ -107,12 +99,10 @@ def bfs(board, start):
     visited.append(start)
 
     while queue:
-        # print(queue)
         r, c = queue.popleft()
 
         # check if we have reached the end state
-        if r == 7:
-            # print(direction)
+        if r == END_ROW:
             return backtrace(parent, direction, start, (r, c))
 
         # check neighbouring positions
