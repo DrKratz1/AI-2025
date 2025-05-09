@@ -23,17 +23,6 @@ class Agent:
             case PlayerColor.BLUE:
                 print("Testing: I am playing as BLUE")
 
-        # sort valid moves by the c coordinate of the frog
-
-        redValidMoves = dict(sorted(self.game.validMoves(PlayerColor.RED).items(), key=lambda item: item[0][1]))
-        blueValidMoves = dict(sorted(self.game.validMoves(PlayerColor.BLUE).items(), key=lambda item: item[0][1]))
-
-        # testing the valid moves for each player
-        match self._color:
-            case PlayerColor.RED:
-                print(redValidMoves)
-            case PlayerColor.BLUE:
-                print(blueValidMoves)
     
         #print(self.game)
 
@@ -43,7 +32,25 @@ class Agent:
         to take an action. It must always return an action object.
         """
         print("Testing: Action has been called")        
-        print(self.game)
+        #print(self.game)
+        myCoord = (0, 3)
+
+        redValidMoves = dict(sorted(self.game.validMoves(PlayerColor.RED).items(), key=lambda item: item[0][1]))
+        blueValidMoves = dict(sorted(self.game.validMoves(PlayerColor.BLUE).items(), key=lambda item: item[0][1]))
+        """
+        match self._color:
+            case PlayerColor.RED:
+                print(redValidMoves)
+            case PlayerColor.BLUE:
+                print(blueValidMoves)
+        """
+        if self._color == PlayerColor.RED:
+            print(self.minimaxDecision(self.game, 4, True, redValidMoves, self._color))
+        else:
+            print(self.minimaxDecision(self.game, 4, True, blueValidMoves, self._color))
+    
+       # print(self.minimaxValue(self.game, 4, True, self._color))
+        #print(self.minimaxDecision(self.game, 3, True, redValidMoves[myCoord]))
 
 
         # Below we have hardcoded two actions to be played depending on whether
@@ -83,6 +90,97 @@ class Agent:
 
             case _:
                 raise ValueError(f"Unknown action type: {action}")
+    
+    def minimaxDecision(self, state: 'GameState', depth: int, maxToMove: bool, operators: list, color: PlayerColor):
+        highestOp = float('-inf')
+        frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
+
+        for (r, c) in frogs:
+            for op in operators[(r, c)]:
+                #print(f"Testing: Operator of ({r},{c}) is ", op)
+                
+                newState = state.copyState()
+                if op == "Grow":
+                    newState.grow(color)
+                else:
+                    newState.move(color, Coord(r, c), op)
+                print(newState)
+
+                opValue = self.minimaxValue(newState, depth, not maxToMove, color)
+                #print(f"evaluationValue = {opValue}")
+
+                if opValue > highestOp:
+                    highestOp = opValue
+                    frogToMove = (r, c)
+
+        return (frogToMove, highestOp)
+
+    def minimaxValue(self, state: 'GameState', depth: int, maxToMove: bool, color: PlayerColor):
+        if depth == 0 or state.checkWinner() is not None:
+            print("terminal condition satisfied")
+            return self.evaluateMove(self.state, color)
+
+        elif maxToMove:
+            return self.maxValue(state, depth - 1, color)
+        
+        else:
+            return self.minValue(state, depth - 1, color)
+        
+    def maxValue(self, state: 'GameState', depth: int, color: PlayerColor):
+        highestOp = float('-inf')
+        frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
+
+        operators = dict(sorted(self.game.validMoves(PlayerColor.RED).items(), key=lambda item: item[0][1])) if color == PlayerColor.RED else dict(sorted(self.game.validMoves(PlayerColor.BLUE).items(), key=lambda item: item[0][1]))
+
+        for (r, c) in frogs:
+            for op in operators[(r, c)]:
+                #print(f"Testing: Operator of ({r},{c}) is ", op)
+                
+                newState = state.copyState()
+                if op == "Grow":
+                    newState.grow(color)
+                else:
+                    newState.move(color, Coord(r, c), op)
+                
+                opValue = self.evaluateMove(newState, color)
+                if opValue > highestOp:
+                    highestOp = opValue
+        return highestOp
+    
+    def minValue(self, state: 'GameState', depth: int, color: PlayerColor):
+        lowestOp = float('inf')
+        frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
+
+        operators = dict(sorted(self.game.validMoves(PlayerColor.RED).items(), key=lambda item: item[0][1])) if color == PlayerColor.RED else dict(sorted(self.game.validMoves(PlayerColor.BLUE).items(), key=lambda item: item[0][1]))
+
+        for (r, c) in frogs:
+            for op in operators[(r, c)]:
+                #print(f"Testing: Operator of ({r},{c}) is ", op)
+                
+                newState = state.copyState()
+                if op == "Grow":
+                    newState.grow(color)
+                else:
+                    newState.move(color, Coord(r, c), op)
+                
+                opValue = self.evaluateMove(newState, color)
+                if opValue < lowestOp:
+                    lowestOp = opValue
+        return lowestOp
+
+    def evaluateMove(self, state: 'GameState', color: PlayerColor):
+        print("Evaluating move")
+        evaluationScore = 0
+
+        if color == PlayerColor.RED:
+            for (r, c) in state.redFrogs:
+                evaluationScore += r
+
+        if color == PlayerColor.BLUE:     
+            for (r, c) in state.blueFrogs:
+                evaluationScore += 7 - r
+
+        return evaluationScore
 
 
 class GameState:
@@ -192,7 +290,9 @@ class GameState:
         validMoves = {}
 
         for frog in frogs:
-            validMoves[frog] = []
+
+            # Frogs will always have the option to grow
+            validMoves[frog] = ["Grow"]
             for direction in directions:
                 newR, newC = frog[0] + direction.r, frog[1] + direction.c
                 if (newR, newC) in self.board:
@@ -243,6 +343,17 @@ class GameState:
                             result[(newR, newC)].append(self.directionDict[(dx, dy)])
                             self.DFS((newR, newC), directions, result, visited)
         return result
+    
+    def copyState(self):
+        # create a deep copy of the game state
+        newState = GameState()
+        newState.board = {coord: cell.copy() for coord, cell in self.board.items()}
+        newState.redFrogs = self.redFrogs.copy()
+        newState.blueFrogs = self.blueFrogs.copy()
+        newState.turn = self.turn
+        newState.directionDict = self.directionDict.copy()
+
+        return newState
 
     def __str__(self):
         # print the board in a readable format
