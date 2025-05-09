@@ -16,25 +16,35 @@ class Agent:
         Any setup and/or precomputation should be done here.
         """
         self._color = color
+        self.game = GameState()
         match color:
             case PlayerColor.RED:
                 print("Testing: I am playing as RED")
             case PlayerColor.BLUE:
                 print("Testing: I am playing as BLUE")
 
-        game = GameState()
-        game.grow(PlayerColor.RED)
-        redValidMoves = game.validMoves(PlayerColor.RED)
         # sort valid moves by the c coordinate of the frog
-        redValidMoves = dict(sorted(redValidMoves.items(), key=lambda item: item[0][1]))
-        print(redValidMoves)
-        print(game)
+
+        redValidMoves = dict(sorted(self.game.validMoves(PlayerColor.RED).items(), key=lambda item: item[0][1]))
+        blueValidMoves = dict(sorted(self.game.validMoves(PlayerColor.BLUE).items(), key=lambda item: item[0][1]))
+
+        # testing the valid moves for each player
+        match self._color:
+            case PlayerColor.RED:
+                print(redValidMoves)
+            case PlayerColor.BLUE:
+                print(blueValidMoves)
+    
+        #print(self.game)
 
     def action(self, **referee: dict) -> Action:
         """
         This method is called by the referee each time it is the agent's turn
         to take an action. It must always return an action object.
         """
+        print("Testing: Action has been called")        
+        print(self.game)
+
 
         # Below we have hardcoded two actions to be played depending on whether
         # the agent is playing as BLUE or RED. Obviously this won't work beyond
@@ -64,8 +74,13 @@ class Agent:
                 print(f"Testing: {color} played MOVE action:")
                 print(f"  Coord: {coord}")
                 print(f"  Directions: {dirs_text}")
+
+                self.game.move(color, coord, dirs)
             case GrowAction():
                 print(f"Testing: {color} played GROW action")
+
+                self.game.grow(color)
+
             case _:
                 raise ValueError(f"Unknown action type: {action}")
 
@@ -126,8 +141,9 @@ class GameState:
                 finalCoord = (coord.r + direction.r, coord.c + direction.c)
             else:
                 raise ValueError(f"Invalid move: {coord} + {direction}")
+        
+        coord = (coord.r, coord.c)
 
-        # move the frog to the new coordinate
         self.board[finalCoord]["state"] = color
         self.board[coord]["state"] = None
 
