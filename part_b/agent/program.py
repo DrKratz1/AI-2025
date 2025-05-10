@@ -342,8 +342,8 @@ class GameState:
                                 jumpResults[coord] != []
                                 and jumpResults[coord] not in validMoves[frog]
                             ):
-                                #print("testing jump: ", jumpResults[coord])
-                                validMoves[frog].append(jumpResults[coord])
+                                #validMoves[frog].append(jumpResults[coord])
+                                pass
         return validMoves
 
     def DFS(
