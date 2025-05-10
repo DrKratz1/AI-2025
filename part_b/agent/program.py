@@ -103,10 +103,12 @@ class Agent:
                 print(f"  Directions: {dirs_text}")
 
                 self.game.move(color, coord, dirs)
+                print(self.game)
             case GrowAction():
                 print(f"Testing: {color} played GROW action")
 
                 self.game.grow(color)
+                print(self.game)
 
             case _:
                 raise ValueError(f"Unknown action type: {action}")
@@ -349,11 +351,18 @@ class GameState:
         # compute final coordinates
         finalCoord = (coord.r, coord.c)
         for direction in directions:
+            if type(direction) == list:
+                direction = direction[0]
+                print(direction)
             nextCoord = (finalCoord[0] + direction.r, finalCoord[1] + direction.c)
             if self.board[nextCoord]["state"] != "pad":
                 finalCoord = (nextCoord[0] + direction.r, nextCoord[1] + direction.c)
             else:
                 finalCoord = nextCoord
+            if finalCoord not in self.board:
+                print(direction, directions, (coord.r, coord.c), finalCoord, color)
+                print(self.board)
+                raise ValueError("Invalid move: out of bounds")
 
         coord = (coord.r, coord.c)
 
@@ -427,7 +436,6 @@ class GameState:
                                 and jumpResults[coord] not in validMoves[frog]
                             ):
                                 validMoves[frog].append(jumpResults[coord])
-                                pass
         return validMoves
 
     def DFS(
@@ -439,25 +447,22 @@ class GameState:
     ):
         for dx, dy in directions:
             newR, newC = frog[0] + dx, frog[1] + dy
-            if (newR, newC) in self.board:
-                if self.board[(newR, newC)]["state"] not in [None, "pad"]:
-                    newR, newC = newR + dx, newC + dy
-
-                    if (newR, newC) in self.board:
+            newPosition = (newR, newC)
+            if newPosition in self.board:
+                if self.board[newPosition]["state"] not in ["pad", None]:
+                    newPosition = (newR + dx, newC + dy)
+                    if newPosition in self.board:
                         if (
-                            self.board[(newR, newC)]["state"] == "pad"
-                            and (newR, newC) not in visited
+                            self.board[newPosition]["state"] == "pad"
+                            and newPosition not in visited
                         ):
-                            visited.append((newR, newC))
+                            visited.append(newPosition)
 
-                            # do direction appending here
-                            result[(newR, newC)] = []
-                            if result[newR - 2 * dx, newC - 2 * dy] != []:
-                                result[(newR, newC)] = result[
-                                    newR - 2 * dx, newC - 2 * dy
-                                ]
-                            result[(newR, newC)].append(self.directionDict[(dx, dy)])
-                            self.DFS((newR, newC), directions, result, visited)
+                            result[newPosition] = []
+                            if result[frog] != []:
+                                result[newPosition].extend(result[frog])
+                            result[newPosition].append(self.directionDict[(dx, dy)])
+                            self.DFS(newPosition, directions, result, visited)
         return result
 
     def copyState(self):
