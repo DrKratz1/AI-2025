@@ -38,6 +38,9 @@ class Agent:
         redValidMoves = dict(sorted(self.game.validMoves(PlayerColor.RED).items(), key=lambda item: item[0][1]))
         blueValidMoves = dict(sorted(self.game.validMoves(PlayerColor.BLUE).items(), key=lambda item: item[0][1]))
 
+        #print(redValidMoves[(0, 2)])
+
+        
         if self._color == PlayerColor.RED:
             frogTomove, bestAction = self.minimaxDecision(self.game, 4, True, redValidMoves, self._color)
             print("time to move frog at ", frogTomove, " with operator ", bestAction)
@@ -63,6 +66,7 @@ class Agent:
                     return GrowAction()
                 else:
                     return MoveAction(Coord(frogToMove[0], frogToMove[1]), bestAction)
+        
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
         """
@@ -116,22 +120,20 @@ class Agent:
                     highestOp = opValue
                     frogToMove = (r, c)
                     bestAction = op
+
         print(f"Best move for {color} is to move frog at {frogToMove} with operator {bestAction} with value {highestOp}")
         return (frogToMove, bestAction)
     
     def minimaxValue(self, state: 'GameState', depth: int, maxToMove: bool, color: PlayerColor, alpha: float, beta: float):
         #print("depth = ", depth)
         if depth == 0 or state.checkWinner() is not None:
-            if depth == 0:
-                #print("terminal condition satisfied, evaluation = ", self.evaluateMove(state, color))
-                return self.evaluateMove(state, color)
+            #print("terminal condition satisfied, evaluation = ", self.evaluateMove(state, color))
+            return self.evaluateMove(state, color)
 
         if maxToMove:
-            #print("maxToMove")
             return self.maxValue(state, depth, color, alpha, beta)
         
         else:
-            #print("minToMove")
             return self.minValue(state, depth, color, alpha, beta)
         
     def maxValue(self, state: 'GameState', depth: int, color: PlayerColor, alpha: float, beta: float):
@@ -260,15 +262,16 @@ class GameState:
                             self.board[(r + dr, c + dc)]["state"]
 
     def move(self, color: PlayerColor, coord: Coord, directions: list[Direction]):
-        # compute final coordinates
-        finalCoord = coord
+       # compute final coordinates
+        finalCoord = Coord(coord.r, coord.c)
         for direction in directions:
-            if (coord.r + direction.r, coord.c + direction.c) in self.board:
-                finalCoord = (coord.r + direction.r, coord.c + direction.c)
+            if (finalCoord.r + direction.r, finalCoord.c + direction.c) in self.board:
+                finalCoord = Coord(finalCoord.r + direction.r, finalCoord.c + direction.c)
             else:
-                raise ValueError(f"Invalid move: {coord} + {direction}")
+                raise ValueError(f"Invalid move: {finalCoord} + {direction}")
         
         coord = (coord.r, coord.c)
+        finalCoord = (finalCoord.r, finalCoord.c)
 
         self.board[finalCoord]["state"] = color
         self.board[coord]["state"] = None
@@ -339,8 +342,8 @@ class GameState:
                                 jumpResults[coord] != []
                                 and jumpResults[coord] not in validMoves[frog]
                             ):
-                                #validMoves[frog].append(jumpResults[coord])
-                                pass
+                                #print("testing jump: ", jumpResults[coord])
+                                validMoves[frog].append(jumpResults[coord])
         return validMoves
 
     def DFS(
@@ -369,6 +372,7 @@ class GameState:
                                 result[(newR, newC)] = result[
                                     newR - 2 * dx, newC - 2 * dy
                                 ]
+                            result[(newR, newC)].append(self.directionDict[(dx, dy)])
                             result[(newR, newC)].append(self.directionDict[(dx, dy)])
                             self.DFS((newR, newC), directions, result, visited)
         return result
