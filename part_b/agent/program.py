@@ -47,7 +47,7 @@ class Agent:
                 if self.game.turn < 6:
                     DEPTH = 1
                 else:
-                    DEPTH = 4
+                    DEPTH = 3
                 frogToMove, bestAction = self.minimaxDecision(
                     self.game, DEPTH, True, redValidMoves, self._color
                 )
@@ -62,7 +62,7 @@ class Agent:
                 if self.game.turn < 6:
                     DEPTH = 1
                 else:
-                    DEPTH = 4
+                    DEPTH = 3
                 frogToMove, bestAction = self.minimaxDecision(
                     self.game, DEPTH, True, blueValidMoves, self._color
                 )
@@ -113,6 +113,7 @@ class Agent:
         frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
         alpha = float("-inf")
         beta = float("inf")
+        gorw = False
 
         for r, c in frogs:
             for op in operators[(r, c)]:
@@ -123,12 +124,13 @@ class Agent:
                 newState = state.copyState()
                 if op == "Grow":
                     newState.grow(color)
+                    grow = True
                 else:
                     newState.move(color, Coord(r, c), op)
                 # print(newState)
 
                 opValue = self.minimaxValue(
-                    newState, depthValue - 1, not maxToMove, color, alpha, beta
+                    newState, depthValue - 1, not maxToMove, color, alpha, beta, grow
                 )
                 # print(f"evaluationValue = {opValue}")
 
@@ -150,10 +152,11 @@ class Agent:
         color: PlayerColor,
         alpha: float,
         beta: float,
+        grow: bool
     ):
         if depth == 0 or state.checkWinner() is not None:
             # print("terminal condition satisfied, evaluation = ", self.evaluateMove(state, color))
-            return self.evaluateMove(state, color)
+            return self.evaluateMove(state, color, grow)
 
         if maxToMove:
             return self.maxValue(state, depth, color, alpha, beta)
@@ -194,11 +197,13 @@ class Agent:
                 newState = state.copyState()
                 if op == "Grow":
                     newState.grow(color)
+                    grow = True
                 else:
                     newState.move(color, Coord(r, c), op)
+                    grow = False
 
                 opValue = self.minimaxValue(
-                    newState, depth - 1, False, color, alpha, beta
+                    newState, depth - 1, False, color, alpha, beta, grow
                 )
                 if opValue > highestOp:
                     highestOp = opValue
@@ -247,11 +252,13 @@ class Agent:
                 newState = state.copyState()
                 if op == "Grow":
                     newState.grow(opponentColor)
+                    grow = True
                 else:
                     newState.move(opponentColor, Coord(r, c), op)
+                    grow = False
 
                 opValue = self.minimaxValue(
-                    newState, depth - 1, True, color, alpha, beta
+                    newState, depth - 1, True, color, alpha, beta, grow
                 )
                 if opValue < lowestOp:
                     lowestOp = opValue
@@ -264,7 +271,7 @@ class Agent:
 
         return lowestOp
 
-    def evaluateMove(self, state: 'GameState', color: PlayerColor):
+    def evaluateMove(self, state: 'GameState', color: PlayerColor, grow: bool):
         evaluationScore = 0
         frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
         opponentColor = PlayerColor.BLUE if color == PlayerColor.RED else PlayerColor.RED
@@ -274,9 +281,17 @@ class Agent:
         evaluationScore += 5 * (self.countJumpChains(state, color))
 
         # Penalise the player for setting up opponent's jump chains
-        #evaluationScore -= 10 * (self.countJumpChains(state, opponentColor))
+        #evaluationScore -= 5 * (self.countJumpChains(state, opponentColor))
+
+        # Reward a grow move for the amount of pads created
+        if grow:
+            evaluationScore += 0.5 * len([cell for cell in state.board.values() if cell["state"] == "pad"])
+        #else:
+            # Slight penalty for growing to avoid excessive stalling
+        evaluationScore -= 0.5 * len([cell for cell in state.board.values() if cell["state"] == "pad"])
 
         # Reward the player for moving frogs closer to the end, while giving priority to the frogs that are already closer to the beginning
+
         for (r, c) in frogs:
             multiplier = 1
             if (color == PlayerColor.RED and r <= 2) or (color == PlayerColor.BLUE and r >= 5):
@@ -291,9 +306,6 @@ class Agent:
         # Reward the move that leads to the winning state
         if all(f[0] == 7 for f in frogs) if color == PlayerColor.RED else all(f[0] == 0 for f in frogs):
             evaluationScore += 10000
-
-        # Slight penalty for growing to avoid excessive stalling
-        evaluationScore -= 0.5 * len([cell for cell in state.board.values() if cell["state"] == "pad"])
 
         return evaluationScore
 
