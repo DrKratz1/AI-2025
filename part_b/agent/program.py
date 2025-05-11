@@ -3,7 +3,6 @@
 
 from referee.game import PlayerColor, Coord, Direction, Action, MoveAction, GrowAction
 
-
 class Agent:
     """
     This class is the "entry point" for your agent, providing an interface to
@@ -17,6 +16,7 @@ class Agent:
         """
         self._color = color
         self.game = GameState()
+        
         match color:
             case PlayerColor.RED:
                 print("Testing: I am playing as RED")
@@ -30,9 +30,6 @@ class Agent:
         This method is called by the referee each time it is the agent's turn
         to take an action. It must always return an action object.
         """
-        print("Testing: Action has been called")
-        # print(self.game)
-
         redValidMoves = dict(
             sorted(
                 self.game.validMoves(PlayerColor.RED).items(),
@@ -45,27 +42,16 @@ class Agent:
                 key=lambda item: item[0][1],
             )
         )
-
-        # print(redValidMoves[(0, 2)])
-
-        if self._color == PlayerColor.RED:
-            frogTomove, bestAction = self.minimaxDecision(
-                self.game, 4, True, redValidMoves, self._color
-            )
-            print("time to move frog at ", frogTomove, " with operator ", bestAction)
-        else:
-            frogTomove, bestAction = self.minimaxDecision(
-                self.game, 4, True, blueValidMoves, self._color
-            )
-
         match self._color:
             case PlayerColor.RED:
+                if self.game.turn < 6:
+                    DEPTH = 1
+                else:
+                    DEPTH = 4
                 frogToMove, bestAction = self.minimaxDecision(
-                    self.game, 4, True, redValidMoves, self._color
+                    self.game, DEPTH, True, redValidMoves, self._color
                 )
-                print(
-                    "time to move frog at ", frogToMove, " with operator ", bestAction
-                )
+                self.game.turn += 1
 
                 if bestAction == "Grow":
                     return GrowAction()
@@ -73,13 +59,15 @@ class Agent:
                     return MoveAction(Coord(frogToMove[0], frogToMove[1]), bestAction)
 
             case PlayerColor.BLUE:
+                if self.game.turn < 6:
+                    DEPTH = 1
+                else:
+                    DEPTH = 4
                 frogToMove, bestAction = self.minimaxDecision(
-                    self.game, 4, True, blueValidMoves, self._color
-                )
-                print(
-                    "time to move frog at ", frogToMove, " with operator ", bestAction
+                    self.game, DEPTH, True, blueValidMoves, self._color
                 )
 
+                self.game.turn += 1
                 if bestAction == "Grow":
                     return GrowAction()
                 else:
@@ -103,12 +91,12 @@ class Agent:
                 print(f"  Directions: {dirs_text}")
 
                 self.game.move(color, coord, dirs)
-                print(self.game)
+                #print(self.game)
             case GrowAction():
                 print(f"Testing: {color} played GROW action")
 
                 self.game.grow(color)
-                print(self.game)
+                #print(self.game)
 
             case _:
                 raise ValueError(f"Unknown action type: {action}")
@@ -163,7 +151,6 @@ class Agent:
         alpha: float,
         beta: float,
     ):
-        # print("depth = ", depth)
         if depth == 0 or state.checkWinner() is not None:
             # print("terminal condition satisfied, evaluation = ", self.evaluateMove(state, color))
             return self.evaluateMove(state, color)
@@ -277,26 +264,68 @@ class Agent:
 
         return lowestOp
 
-    def evaluateMove(self, state: "GameState", color: PlayerColor):
+    def evaluateMove(self, state: 'GameState', color: PlayerColor):
         evaluationScore = 0
+        frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
+        opponentColor = PlayerColor.BLUE if color == PlayerColor.RED else PlayerColor.RED
+        opponentFrogs = state.blueFrogs if color == PlayerColor.RED else state.redFrogs
 
-        if color == PlayerColor.RED:
-            for r, c in state.redFrogs:
-                evaluationScore += r
+        # Reward the player for setting up jump chains
+        evaluationScore += 5 * (self.countJumpChains(state, color))
 
-            for r, c in state.blueFrogs:
-                evaluationScore -= 7 - r
+        # Penalise the player for setting up opponent's jump chains
+        #evaluationScore -= 10 * (self.countJumpChains(state, opponentColor))
 
-        if color == PlayerColor.BLUE:
-            for r, c in state.blueFrogs:
-                evaluationScore += 7 - r
+        # Reward the player for moving frogs closer to the end, while giving priority to the frogs that are already closer to the beginning
+        for (r, c) in frogs:
+            multiplier = 1
+            if (color == PlayerColor.RED and r <= 2) or (color == PlayerColor.BLUE and r >= 5):
+                multiplier = 1.5 
 
-            for r, c in state.redFrogs:
-                evaluationScore -= r
+            evaluationScore += (r * 10 * multiplier) if color == PlayerColor.RED else ((7 - r) * 10 * multiplier)
 
-        # print("Evaluating move: ", evaluationScore)
+        # Penalise opponent's progress
+        for (r, c) in opponentFrogs:
+            evaluationScore -= (r * 10) if color == PlayerColor.BLUE else ((7 - r) * 10)
+
+        # Reward the move that leads to the winning state
+        if all(f[0] == 7 for f in frogs) if color == PlayerColor.RED else all(f[0] == 0 for f in frogs):
+            evaluationScore += 10000
+
+        # Slight penalty for growing to avoid excessive stalling
+        evaluationScore -= 0.5 * len([cell for cell in state.board.values() if cell["state"] == "pad"])
 
         return evaluationScore
+
+    def countJumpChains(self, state: 'GameState', color: PlayerColor):
+        numChains = 0
+        jumpChains = []
+        frogs = state.redFrogs if color == PlayerColor.RED else state.blueFrogs
+
+        directions = [
+            Direction.Down, Direction.DownLeft, Direction.DownRight,
+            Direction.Left, Direction.Right
+        ] if color == PlayerColor.RED else [
+            Direction.Up, Direction.UpLeft, Direction.UpRight,
+            Direction.Left, Direction.Right
+        ]
+
+        for frog in frogs:
+            dfsResult = state.DFS(
+                frog,
+                directions,
+                result={frog: []},
+                visited=[]
+            )
+            for nextCoord, jumpPath in dfsResult.items():
+                if jumpPath:
+                    jumpChains.append((frog, jumpPath))
+
+        if len(jumpChains) > 0:
+            numChains = len(jumpChains)
+            #print(f"total chainJumps in this state = {numChains}")
+
+        return(numChains)
 
 
 class GameState:
@@ -439,31 +468,31 @@ class GameState:
         return validMoves
 
     def DFS(
-        self,
-        frog: tuple[int, int],
-        directions: list[Direction],
-        result: list[list[Direction]],
-        visited: list[tuple[int, int]],
-    ):
+    self,
+    frog: tuple[int, int],
+    directions: list[Direction],
+    result: dict[tuple[int, int], list[Direction]],
+    visited: list[tuple[int, int]]
+):
         for dx, dy in directions:
-            newR, newC = frog[0] + dx, frog[1] + dy
-            newPosition = (newR, newC)
-            if newPosition in self.board:
-                if self.board[newPosition]["state"] not in ["pad", None]:
-                    newPosition = (newR + dx, newC + dy)
-                    if newPosition in self.board:
-                        if (
-                            self.board[newPosition]["state"] == "pad"
-                            and newPosition not in visited
-                        ):
-                            visited.append(newPosition)
+            midR, midC = frog[0] + dx, frog[1] + dy
+            midPosition = (midR, midC)
 
-                            result[newPosition] = []
-                            if result[frog] != []:
-                                result[newPosition].extend(result[frog])
-                            result[newPosition].append(self.directionDict[(dx, dy)])
-                            self.DFS(newPosition, directions, result, visited)
+            if midPosition in self.board and self.board[midPosition]["state"] not in ["pad", None]:
+                newR, newC = midR + dx, midC + dy
+                newPosition = (newR, newC)
+
+                if (
+                    newPosition in self.board
+                    and self.board[newPosition]["state"] == "pad"
+                    and newPosition not in visited
+                ):
+                    visited.append(newPosition)
+                    result[newPosition] = result[frog] + [self.directionDict[(dx, dy)]]
+                    self.DFS(newPosition, directions, result, visited)
+        
         return result
+
 
     def copyState(self):
         # create a deep copy of the game state
